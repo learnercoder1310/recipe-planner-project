@@ -1,0 +1,87 @@
+"""
+ source /Users/techsnitch/Downloads/recipe-planner-project/.venv/bin/activate
+LLM integration using Google Gemini API.
+"""
+
+import os
+import json
+import re
+import google.generativeai as genai
+
+# ── Setup ─────────────────────────────────────────────────────
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+
+# ── Prompt Templates (same as before) ─────────────────────────
+
+RECIPE_EXTRACTION_PROMPT = """You are a professional recipe data extractor. 
+Your job is to analyze raw text scraped from a recipe webpage and return ONLY a valid JSON object.
+
+RECIPE PAGE URL: {url}
+
+RAW PAGE CONTENT:
+{page_text}
+
+Return ONLY valid JSON with recipe details.
+"""
+
+MEAL_PLAN_PROMPT = """You are a professional nutritionist.
+
+Recipes:
+{recipes_summary}
+
+Return ONLY JSON meal plan + shopping list.
+"""
+
+
+# ── LLM Caller ────────────────────────────────────────────────
+
+def call_gemini(prompt: str) -> str:
+    response = model.generate_content(prompt)
+    return response.text
+
+
+# ── JSON Parser ───────────────────────────────────────────────
+
+def parse_json_response(raw: str) -> dict:
+    raw = raw.strip()
+
+    # remove ```json ```
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+
+    try:
+        return json.loads(raw)
+    except:
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        raise ValueError("Invalid JSON from LLM")
+
+
+# ── Public Functions ──────────────────────────────────────────
+
+def extract_recipe_with_llm(url: str, page_text: str) -> dict:
+    prompt = RECIPE_EXTRACTION_PROMPT.format(url=url, page_text=page_text)
+    raw = call_gemini(prompt)
+    return parse_json_response(raw)
+
+
+def generate_meal_plan_with_llm(recipes: list) -> dict:
+    summaries = []
+
+    for i, r in enumerate(recipes, 1):
+        ingredients = ", ".join(
+            f"{ing.get('quantity','')} {ing.get('item','')}"
+            for ing in r.get("ingredients", [])[:10]
+        )
+
+        summaries.append(f"{i}. {r['title']} - {ingredients}")
+
+    prompt = MEAL_PLAN_PROMPT.format(
+        recipes_summary="\n".join(summaries)
+    )
+
+    raw = call_gemini(prompt)
+    return parse_json_response(raw)

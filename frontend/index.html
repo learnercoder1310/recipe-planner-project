@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Extractor & Meal Planner</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0e0c;
+      --surface: #1a1916;
+      --surface2: #242220;
+      --border: #2e2c29;
+      --accent: #e8c547;
+      --accent2: #c8a830;
+      --text: #f0ede8;
+      --text2: #a09b94;
+      --text3: #6b6560;
+      --green: #5cb87e;
+      --red: #d9635a;
+      --blue: #5a9fd9;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    /* HEADER */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      padding: 1rem 0;
+      white-space: nowrap;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--text); }
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-left: auto;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: var(--surface2); color: var(--text); }
+    .tab-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+
+    /* MAIN */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    /* URL INPUT AREA */
+    .extract-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+    }
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .hero-subtitle { color: var(--text2); margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .url-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.85rem 1.2rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: var(--accent); }
+    .url-input::placeholder { color: var(--text3); }
+    .btn {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #000;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.85rem 1.5rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: var(--surface2); }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #c2564d; }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+    .btn-green { background: var(--green); color: #000; }
+    .btn-green:hover { background: #4da36e; }
+
+    /* LOADING & ERROR */
+    .loader {
+      display: flex; align-items: center; gap: 0.75rem;
+      color: var(--text2); padding: 1.5rem 0;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box {
+      background: rgba(217,99,90,0.1);
+      border: 1px solid var(--red);
+      border-radius: var(--radius);
+      color: var(--red);
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    .success-box {
+      background: rgba(92,184,126,0.1);
+      border: 1px solid var(--green);
+      border-radius: var(--radius);
+      color: var(--green);
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    /* RECIPE DISPLAY */
+    .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .recipe-header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 1rem;
+    }
+    .recipe-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+    .recipe-meta {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      color: var(--text2);
+      font-size: 0.8rem;
+      padding: 0.3rem 0.8rem;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .badge.accent { background: rgba(232,197,71,0.12); border-color: var(--accent); color: var(--accent); }
+    .badge.green  { background: rgba(92,184,126,0.12); border-color: var(--green);  color: var(--green);  }
+    .badge.red    { background: rgba(217,99,90,0.12);  border-color: var(--red);    color: var(--red);    }
+
+    /* NUTRITION */
+    .nutrition-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .nutrition-item { text-align: center; }
+    .nutrition-value { font-size: 1.6rem; font-weight: 600; color: var(--accent); }
+    .nutrition-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* INGREDIENTS */
+    .ingredient-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .ingredient-row:last-child { border-bottom: none; }
+    .ing-qty { color: var(--accent); font-weight: 600; min-width: 50px; font-size: 0.9rem; }
+    .ing-unit { color: var(--text2); font-size: 0.85rem; min-width: 50px; }
+    .ing-item { color: var(--text); font-size: 0.9rem; }
+
+    /* INSTRUCTIONS */
+    .step { display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      min-width: 28px; height: 28px;
+      background: var(--accent);
+      color: #000; font-weight: 700;
+      border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;
+    }
+    .step-text { color: var(--text); font-size: 0.9rem; line-height: 1.6; }
+
+    /* SHOPPING LIST */
+    .category-title {
+      font-size: 0.75rem; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text3);
+      margin-bottom: 0.5rem; margin-top: 1rem;
+    }
+    .category-title:first-child { margin-top: 0; }
+    .shopping-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0; color: var(--text2); font-size: 0.9rem;
+    }
+    .shopping-item::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* SUBSTITUTIONS & RELATED */
+    .subst-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      color: var(--text2);
+      margin-bottom: 0.5rem;
+      border-left: 3px solid var(--accent);
+    }
+    .related-chip {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.4rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text);
+      margin: 0.25rem;
+    }
+
+    /* HISTORY TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 0.9rem 1rem; font-size: 0.9rem; color: var(--text2); }
+    tbody td:first-child { color: var(--text); font-weight: 500; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      display: flex; align-items: flex-start;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 2rem 1rem;
+    }
+    .modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%; max-width: 900px;
+      padding: 2rem;
+      position: relative;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+    .modal-close {
+      position: absolute; top: 1.25rem; right: 1.25rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text2); font-size: 1.2rem;
+      width: 36px; height: 36px;
+      border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { background: var(--surface); color: var(--text); }
+
+    /* MEAL PLANNER */
+    .meal-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+    .meal-recipe-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .meal-recipe-card:hover { border-color: var(--accent); }
+    .meal-recipe-card.selected { border-color: var(--accent); background: rgba(232,197,71,0.05); }
+    .meal-recipe-card-title { font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem; }
+    .meal-recipe-card-meta { font-size: 0.8rem; color: var(--text2); }
+    .meal-plan-day {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .day-label { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+    .day-meal { font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-top: 0.25rem; }
+    .day-recipe { font-weight: 600; color: var(--text); margin-top: 0.25rem; }
+    .day-notes { font-size: 0.85rem; color: var(--text2); margin-top: 0.25rem; }
+
+    /* SECTION DIVIDER */
+    .section-gap { margin-bottom: 1rem; }
+    .full-width { grid-column: 1 / -1; }
+
+    @media (max-width: 700px) {
+      .recipe-grid { grid-template-columns: 1fr; }
+      .nutrition-grid { grid-template-columns: repeat(2, 1fr); }
+      .input-row { flex-direction: column; }
+      .header { flex-wrap: wrap; padding: 0.75rem 1rem; }
+      .tabs { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Config ──────────────────────────────────────────────────────────────────
+const API_BASE = "http://localhost:8000";
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function diffBadge(diff) {
+  const map = { easy: 'green', medium: 'accent', hard: 'red' };
+  return <span className={`badge ${map[diff] || 'accent'}`}>● {diff}</span>;
+}
+
+function fmt(date) {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ── RecipeDisplay Component ──────────────────────────────────────────────────
+function RecipeDisplay({ recipe }) {
+  if (!recipe) return null;
+  const { title, cuisine, prep_time, cook_time, total_time, servings,
+          difficulty, ingredients, instructions, nutrition_estimate,
+          substitutions, shopping_list, related_recipes } = recipe;
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="recipe-header section-gap">
+        <div className="recipe-title">{title}</div>
+        <div className="recipe-meta">
+          {cuisine    && <span className="badge">🍽 {cuisine}</span>}
+          {prep_time  && <span className="badge">⏱ Prep: {prep_time}</span>}
+          {cook_time  && <span className="badge">🔥 Cook: {cook_time}</span>}
+          {total_time && <span className="badge accent">⏳ Total: {total_time}</span>}
+          {servings   && <span className="badge">👥 {servings} servings</span>}
+          {difficulty && diffBadge(difficulty)}
+        </div>
+      </div>
+
+      {/* Nutrition */}
+      {nutrition_estimate && Object.keys(nutrition_estimate).length > 0 && (
+        <div className="card section-gap">
+          <div className="card-title">📊 Nutrition Estimate (per serving)</div>
+          <div className="nutrition-grid">
+            <div className="nutrition-item">
+              <div className="nutrition-value">{nutrition_estimate.calories}</div>
+              <div className="nutrition-label">Calories</div>
+            </div>
+            <div className="nutrition-item">
+              <div className="nutrition-value">{nutrition_estimate.protein}</div>
+              <div className="nutrition-label">Protein</div>
+            </div>
+            <div className="nutrition-item">
+              <div className="nutrition-value">{nutrition_estimate.carbs}</div>
+              <div className="nutrition-label">Carbs</div>
+            </div>
+            <div className="nutrition-item">
+              <div className="nutrition-value">{nutrition_estimate.fat}</div>
+              <div className="nutrition-label">Fat</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Grid */}
+      <div className="recipe-grid">
+        {/* Ingredients */}
+        {ingredients && ingredients.length > 0 && (
+          <div className="card">
+            <div className="card-title">🧂 Ingredients ({ingredients.length})</div>
+            {ingredients.map((ing, i) => (
+              <div className="ingredient-row" key={i}>
+                <span className="ing-qty">{ing.quantity}</span>
+                <span className="ing-unit">{ing.unit}</span>
+                <span className="ing-item">{ing.item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Shopping List */}
+        {shopping_list && Object.keys(shopping_list).length > 0 && (
+          <div className="card">
+            <div className="card-title">🛒 Shopping List</div>
+            {Object.entries(shopping_list).map(([cat, items]) => (
+              items && items.length > 0 && (
+                <div key={cat}>
+                  <div className="category-title">{cat}</div>
+                  {items.map((item, i) => (
+                    <div className="shopping-item" key={i}>{item}</div>
+                  ))}
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
+        {/* Instructions */}
+        {instructions && instructions.length > 0 && (
+          <div className="card full-width">
+            <div className="card-title">📋 Step-by-step Instructions</div>
+            {instructions.map((step, i) => (
+              <div className="step" key={i}>
+                <div className="step-num">{i + 1}</div>
+                <div className="step-text">{step}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Substitutions */}
+        {substitutions && substitutions.length > 0 && (
+          <div className="card">
+            <div className="card-title">🔄 Ingredient Substitutions</div>
+            {substitutions.map((s, i) => (
+              <div className="subst-item" key={i}>{s}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Related Recipes */}
+        {related_recipes && related_recipes.length > 0 && (
+          <div className="card">
+            <div className="card-title">🍴 Related Recipes</div>
+            <div style={{ marginTop: '0.5rem' }}>
+              {related_recipes.map((r, i) => (
+                <span className="related-chip" key={i}>{r}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+function Modal({ recipe, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <RecipeDisplay recipe={recipe} />
+      </div>
+    </div>
+  );
+}
+
+// ── Tab 1: Extract Recipe ────────────────────────────────────────────────────
+function ExtractTab() {
+  const [url, setUrl]           = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [recipe, setRecipe]     = useState(null);
+
+  const sampleUrls = [
+    'https://www.allrecipes.com/recipe/23891/grilled-cheese-sandwich/',
+    'https://www.allrecipes.com/recipe/24074/alysias-basic-meatballs/',
+    'https://www.bbcgoodfood.com/recipes/classic-pancakes',
+  ];
+
+  async function handleExtract() {
+    if (!url.trim()) { setError('Please enter a recipe URL.'); return; }
+    setError(''); setLoading(true); setRecipe(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/extract-recipe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Extraction failed.');
+      setRecipe(data);
+    } catch (e) {
+      setError(e.message || 'Something went wrong. Check that the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="extract-hero">
+        <div className="hero-title">Extract Any Recipe</div>
+        <div className="hero-subtitle">
+          Paste a recipe blog URL below. We'll scrape it, extract the full recipe,
+          estimate nutrition, suggest substitutions, and generate a shopping list — automatically.
+        </div>
+
+        <div className="input-row">
+          <input
+            className="url-input"
+            type="url"
+            placeholder="https://www.allrecipes.com/recipe/..."
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleExtract()}
+          />
+          <button className="btn" onClick={handleExtract} disabled={loading}>
+            {loading ? '⏳ Extracting...' : '🔍 Extract Recipe'}
+          </button>
+        </div>
+
+        {/* Sample URLs */}
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>Try:</span>
+          {sampleUrls.map((u, i) => (
+            <button key={i} className="btn btn-outline btn-sm" onClick={() => setUrl(u)}>
+              Sample {i + 1}
+            </button>
+          ))}
+        </div>
+
+        {error && <div className="error-box">⚠️ {error}</div>}
+        {loading && (
+          <div className="loader">
+            <div className="spinner"></div>
+            Scraping page and analyzing with AI... this may take 15-30 seconds.
+          </div>
+        )}
+      </div>
+
+      {recipe && <RecipeDisplay recipe={recipe} />}
+    </div>
+  );
+}
+
+// ── Tab 2: History ───────────────────────────────────────────────────────────
+function HistoryTab() {
+  const [recipes, setRecipes]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [selectedRecipe, setSelected] = useState(null);
+  const [error, setError]             = useState('');
+
+  async function loadRecipes() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/recipes`);
+      const data = await res.json();
+      setRecipes(Array.isArray(data) ? data : []);
+    } catch {
+      setError('Could not load history. Check that the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openDetails(id) {
+    try {
+      const res = await fetch(`${API_BASE}/api/recipes/${id}`);
+      const data = await res.json();
+      setSelected(data);
+    } catch {
+      alert('Failed to load recipe details.');
+    }
+  }
+
+  async function deleteRecipe(id, e) {
+    e.stopPropagation();
+    if (!confirm('Delete this recipe from history?')) return;
+    try {
+      await fetch(`${API_BASE}/api/recipes/${id}`, { method: 'DELETE' });
+      setRecipes(prev => prev.filter(r => r.id !== id));
+    } catch {
+      alert('Delete failed.');
+    }
+  }
+
+  useEffect(() => { loadRecipes(); }, []);
+
+  if (loading) return (
+    <div className="loader"><div className="spinner"></div> Loading history...</div>
+  );
+  if (error) return <div className="error-box">⚠️ {error}</div>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <h2 style={{ fontFamily: 'Playfair Display', fontSize: '1.75rem' }}>
+          Recipe History
+          <span style={{ fontSize: '0.9rem', fontFamily: 'DM Sans', color: 'var(--text2)', marginLeft: '0.75rem', fontWeight: 400 }}>
+            {recipes.length} saved
+          </span>
+        </h2>
+        <button className="btn btn-outline btn-sm" onClick={loadRecipes}>↻ Refresh</button>
+      </div>
+
+      {recipes.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text2)' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📭</div>
+          No recipes yet. Go to Tab 1 to extract your first recipe!
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>Cuisine</th>
+                <th>Difficulty</th>
+                <th>Total Time</th>
+                <th>Servings</th>
+                <th>Date Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recipes.map(r => (
+                <tr key={r.id}>
+                  <td>{r.id}</td>
+                  <td style={{ color: 'var(--text)', fontWeight: 500 }}>{r.title}</td>
+                  <td>{r.cuisine || '—'}</td>
+                  <td>{r.difficulty ? diffBadge(r.difficulty) : '—'}</td>
+                  <td>{r.total_time || '—'}</td>
+                  <td>{r.servings || '—'}</td>
+                  <td>{fmt(r.created_at)}</td>
+                  <td style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button className="btn btn-sm" onClick={() => openDetails(r.id)}>Details</button>
+                    <button className="btn btn-danger btn-sm" onClick={(e) => deleteRecipe(r.id, e)}>✕</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedRecipe && (
+        <Modal recipe={selectedRecipe} onClose={() => setSelected(null)} />
+      )}
+    </div>
+  );
+}
+
+// ── Tab 3: Meal Planner ──────────────────────────────────────────────────────
+function MealPlannerTab() {
+  const [recipes, setRecipes]       = useState([]);
+  const [selected, setSelected]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [mealPlan, setMealPlan]     = useState(null);
+  const [error, setError]           = useState('');
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/recipes`);
+        const data = await res.json();
+        setRecipes(Array.isArray(data) ? data : []);
+      } catch {
+        setError('Could not load recipes.');
+      } finally { setLoading(false); }
+    })();
+  }, []);
+
+  function toggleSelect(id) {
+    setSelected(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id)
+        : prev.length < 5 ? [...prev, id]
+        : prev
+    );
+  }
+
+  async function generatePlan() {
+    if (selected.length < 3) { setError('Please select at least 3 recipes.'); return; }
+    setError(''); setGenerating(true); setMealPlan(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/meal-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_ids: selected }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Generation failed.');
+      setMealPlan(data);
+    } catch (e) {
+      setError(e.message);
+    } finally { setGenerating(false); }
+  }
+
+  if (loading) return <div className="loader"><div className="spinner"></div> Loading recipes...</div>;
+
+  return (
+    <div>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontFamily: 'Playfair Display', fontSize: '1.75rem', marginBottom: '0.4rem' }}>
+          Meal Planner
+        </h2>
+        <p style={{ color: 'var(--text2)', fontSize: '0.9rem' }}>
+          Select 3–5 saved recipes to generate a combined meal plan and merged shopping list.
+        </p>
+      </div>
+
+      {recipes.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text2)' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🧑‍🍳</div>
+          Extract some recipes first (Tab 1), then come back here!
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ color: 'var(--text2)', fontSize: '0.9rem' }}>
+              {selected.length} / 5 selected
+            </span>
+            <button
+              className="btn btn-green"
+              onClick={generatePlan}
+              disabled={generating || selected.length < 3}
+            >
+              {generating ? '⏳ Generating...' : '📅 Generate Meal Plan'}
+            </button>
+          </div>
+
+          {error && <div className="error-box" style={{ marginBottom: '1rem' }}>⚠️ {error}</div>}
+
+          <div className="meal-select-grid" style={{ marginBottom: '2rem' }}>
+            {recipes.map(r => (
+              <div
+                key={r.id}
+                className={`meal-recipe-card ${selected.includes(r.id) ? 'selected' : ''}`}
+                onClick={() => toggleSelect(r.id)}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div className="meal-recipe-card-title">{r.title}</div>
+                  <div style={{ fontSize: '1.2rem' }}>{selected.includes(r.id) ? '✅' : '⬜'}</div>
+                </div>
+                <div className="meal-recipe-card-meta">
+                  {r.cuisine} · {r.difficulty} · {r.total_time}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {generating && (
+            <div className="loader"><div className="spinner"></div> Generating meal plan with AI...</div>
+          )}
+
+          {mealPlan && (
+            <div>
+              {/* Meal Schedule */}
+              {mealPlan.meal_plan && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ fontFamily: 'Playfair Display', fontSize: '1.3rem', marginBottom: '1rem' }}>
+                    📅 Meal Schedule
+                  </div>
+                  {mealPlan.meal_plan.map((item, i) => (
+                    <div className="meal-plan-day" key={i}>
+                      <div className="day-label">{item.day}</div>
+                      <div className="day-meal">{item.meal}</div>
+                      <div className="day-recipe">{item.recipe_title}</div>
+                      {item.notes && <div className="day-notes">{item.notes}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="recipe-grid">
+                {/* Combined Shopping List */}
+                {mealPlan.combined_shopping_list && (
+                  <div className="card">
+                    <div className="card-title">🛒 Combined Shopping List</div>
+                    {Object.entries(mealPlan.combined_shopping_list).map(([cat, items]) => (
+                      items && items.length > 0 && (
+                        <div key={cat}>
+                          <div className="category-title">{cat}</div>
+                          {items.map((item, i) => (
+                            <div className="shopping-item" key={i}>{item}</div>
+                          ))}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                )}
+
+                {/* Nutrition + Tips */}
+                <div>
+                  {mealPlan.total_nutrition_estimate && (
+                    <div className="card section-gap">
+                      <div className="card-title">📊 Avg Daily Nutrition</div>
+                      <div className="nutrition-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
+                        <div className="nutrition-item">
+                          <div className="nutrition-value">{mealPlan.total_nutrition_estimate.avg_daily_calories}</div>
+                          <div className="nutrition-label">Calories</div>
+                        </div>
+                        <div className="nutrition-item">
+                          <div className="nutrition-value">{mealPlan.total_nutrition_estimate.avg_protein}</div>
+                          <div className="nutrition-label">Protein</div>
+                        </div>
+                        <div className="nutrition-item">
+                          <div className="nutrition-value">{mealPlan.total_nutrition_estimate.avg_carbs}</div>
+                          <div className="nutrition-label">Carbs</div>
+                        </div>
+                        <div className="nutrition-item">
+                          <div className="nutrition-value">{mealPlan.total_nutrition_estimate.avg_fat}</div>
+                          <div className="nutrition-label">Fat</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {mealPlan.meal_prep_tips && (
+                    <div className="card">
+                      <div className="card-title">💡 Meal Prep Tips</div>
+                      {mealPlan.meal_prep_tips.map((tip, i) => (
+                        <div className="subst-item" key={i}>{tip}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── App Root ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState('extract');
+
+  return (
+    <>
+      <header className="header">
+        <div className="logo">🍳 Recipe<span>AI</span></div>
+        <div className="tabs">
+          <button className={`tab-btn ${tab === 'extract' ? 'active' : ''}`} onClick={() => setTab('extract')}>
+            Extract Recipe
+          </button>
+          <button className={`tab-btn ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>
+            Saved Recipes
+          </button>
+          <button className={`tab-btn ${tab === 'planner' ? 'active' : ''}`} onClick={() => setTab('planner')}>
+            Meal Planner
+          </button>
+        </div>
+      </header>
+
+      <div className="container">
+        {tab === 'extract' && <ExtractTab />}
+        {tab === 'history' && <HistoryTab />}
+        {tab === 'planner' && <MealPlannerTab />}
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
